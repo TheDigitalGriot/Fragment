@@ -9,6 +9,13 @@ export interface McpServerConfig {
 
 export interface ChannelConfig {
   server: string;
+  /**
+   * Channel transport axis (cl-plugin-structure -> channel-patterns.md -> "Transport Modes").
+   * 'bus' = passive filesystem bus (capabilities:{tools:{}}; $SCREEN_DIR cards out, $STATE_DIR/events
+   * JSONL in) -- headless- and Cowork-cloud-safe, the DEFAULT. 'push' = live-push
+   * (experimental["claude/channel"]) -- interactive-only, inert headless. Absent => treat as 'bus'.
+   */
+  transport?: 'bus' | 'push';
 }
 
 export interface PluginInfo {
@@ -54,7 +61,8 @@ function parsePluginManifest(manifestPath: string, pluginDir: string): PluginInf
     version: raw.version,
     description: raw.description,
     mcpServers: raw.mcpServers || {},
-    channels: raw.channels || [],
+    // Bus-first default: a channel with no declared transport is a passive bus (headless-safe).
+    channels: (raw.channels || []).map((c: ChannelConfig) => ({ transport: 'bus' as const, ...c })),
     userConfig: raw.userConfig || {},
     hooks: raw.hooks || {},
     skills: raw.skills || [],

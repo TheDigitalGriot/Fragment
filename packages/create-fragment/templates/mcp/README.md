@@ -1,12 +1,41 @@
 # {{PROJECT_NAME}} — local stdio MCP server
 
 A scaffold for a **local stdio MCP server** that ships the **no-orphan stdio hygiene standard**
-by default. Two interchangeable variants are emitted — pick one, delete the other:
+AND the **bus-first channel transport** by default. Two interchangeable variants are emitted —
+pick one, delete the other:
 
 - `python/` — the reference implementation (mirrors Cinopsis v2.1.3, which proved the standard).
-  Native Windows `KILL_ON_JOB_CLOSE` Job Object launcher.
+  Native Windows `KILL_ON_JOB_CLOSE` Job Object launcher. Passive bus in `python/channel_bus.py`.
 - `ts/` — a `@modelcontextprotocol/sdk` server for TS-native stacks. Portable child-reaper
-  (see `ts/src/launcher.ts` for the honest Windows Job Object caveat).
+  (see `ts/src/launcher.ts` for the honest Windows Job Object caveat). Passive bus in
+  `ts/src/channel-bus.ts`.
+
+## Channel transport — bus-first (headless / Cowork-cloud safe)
+
+If this server is a **channel** (pushes external events into a Claude session), it is scaffolded
+on the **passive bus** — the load-bearing transport per `cl-plugin-structure` →
+`references/channel-patterns.md` → "Transport Modes — Live-Push vs Passive Bus". There are two
+transports on the channel primitive:
+
+- **Passive bus (default, this scaffold).** The server declares only `capabilities: { tools: {} }`
+  (no push capability) and moves events through the **filesystem**:
+  - **OUT** — `present_card` writes an option card as HTML to a per-session `$SCREEN_DIR` the
+    cockpit renders.
+  - **IN** — `read_events` reads rulings/events as JSONL from `$STATE_DIR/events`.
+
+  Because nothing depends on a live notification listener, the **same server runs unchanged** in
+  an interactive terminal, in **Cowork cloud**, and under headless `claude -p`. `STATE_DIR`
+  resolution precedence: explicit arg → `$STATE_DIR` env → newest session dir → fallback.
+
+- **Live-push (opt-in, interactive-only).** `experimental["claude/channel"]` + the
+  `notifications/claude/channel` method. It needs a live interactive consumer attached to the
+  session, so it is **inert headless**. Layer it on **only** for interactive surfaces
+  (phone-relay, real-time wake) as an accelerator — see the commented opt-in block at the bottom
+  of `server.py` / `server.ts`.
+
+**The Griot rule:** build on the passive bus first; live-push is an optional accelerator, never
+load-bearing. **No emitted skill may gate its correctness on a pushed reply arriving.** Reference
+server: prism `scripts/digital-griot-mcp/digital-griot-mcp.ts`.
 
 ## The standard both variants enforce
 

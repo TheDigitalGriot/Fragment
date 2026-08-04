@@ -69,6 +69,33 @@ describe('mcp surface', () => {
     expect(launcher).toContain('KILL_ON_JOB_CLOSE'); // documents the native-addon caveat
   });
 
+  it('scaffolds the bus-first channel transport in both variants (checklist B13)', () => {
+    const dir = scaffold();
+    // Passive-bus helpers are emitted alongside the hygiene helpers.
+    for (const f of ['apps/mcp/python/channel_bus.py', 'apps/mcp/ts/src/channel-bus.ts']) {
+      expect(existsSync(join(dir, f)), `${f} should exist`).toBe(true);
+    }
+    // Python: tools:{} floor (Server() declares tools by default) + both bus halves, no push default.
+    const pyBus = readFileSync(join(dir, 'apps/mcp/python/channel_bus.py'), 'utf-8');
+    expect(pyBus).toContain('$STATE_DIR/events'); // IN half documented
+    expect(pyBus).toContain('def read_events'); // IN reader
+    expect(pyBus).toContain('def write_card'); // OUT card writer ($SCREEN_DIR)
+    const pyServer = readFileSync(join(dir, 'apps/mcp/python/server.py'), 'utf-8');
+    expect(pyServer).toContain('from channel_bus import read_events, write_card');
+    expect(pyServer).toContain('present_card'); // OUT tool wired
+    // live-push is an OPT-IN comment, never the default capability
+    expect(pyServer).toContain('OPT-IN: live-push');
+    // TS: tools:{} floor + both bus halves + opt-in push comment.
+    const tsBus = readFileSync(join(dir, 'apps/mcp/ts/src/channel-bus.ts'), 'utf-8');
+    expect(tsBus).toContain('export function readEvents'); // IN reader
+    expect(tsBus).toContain('export function writeCard'); // OUT card writer
+    const tsServer = readFileSync(join(dir, 'apps/mcp/ts/src/server.ts'), 'utf-8');
+    expect(tsServer).toContain("capabilities: { tools: {} }"); // passive-bus floor, no push
+    expect(tsServer).toContain("import { readEvents, writeCard } from './channel-bus.js'");
+    expect(tsServer).toContain('present_card'); // OUT tool wired
+    expect(tsServer).toContain('OPT-IN: live-push');
+  });
+
   it('substitutes tokens in emitted server sources', () => {
     const dir = scaffold();
     const pyServer = readFileSync(join(dir, 'apps/mcp/python/server.py'), 'utf-8');
