@@ -6,6 +6,8 @@ model: sonnet
 
 # {{PROJECT_NAME}} Bookend
 
+> **ICM:** if this run was launched with a stage contract (a `*-CONTEXT.md` in `.prism/shared/plans/`, or the path in `$PRISM_ICM_CONTRACT`), read it first and honor its Inputs / Locked Decisions / Success criteria before anything else. Binding: `.prism/shared/ref/icm-run-contract.md`.
+
 Finalize a release cycle: analyze commits → suggest version → sync docs → release. Generalized from the Prism bookend workflow.
 
 ## Step 1: Analyze changes

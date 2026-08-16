@@ -69,3 +69,14 @@ Add to your plugin `.mcp.json` (Python variant shown — it self-reaps via the l
 ```
 
 Then replace the example `run_command` tool with your real tools — **keep the hygiene helpers**.
+
+## The `icm_prism_run` tool (Prism-image)
+
+Both variants also expose **`icm_prism_run`** — a launcher that starts a **Prism ICM stage-walk**
+headless: it spawns `claude -p` with a *thin router prompt* that reads a `*-CONTEXT.md` stage
+contract and drives ONE pipeline stage (research | plan | design | implement | validate)
+autonomously. It launches **detached and non-blocking** (rule 4 binary resolution, rule 3 env
+scrub, rule 2 stdin=DEVNULL) and returns the heartbeat path to poll
+(`.prism/local/<stage>-progress.txt`) — author in Cowork cloud, execute device-side. The contract
+shape it consumes is `.prism/shared/ref/icm-run-contract.md`; the blank is
+`.prism/shared/plans/_TEMPLATE-stage-CONTEXT.md`.

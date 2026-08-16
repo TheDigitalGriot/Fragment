@@ -6,6 +6,8 @@ model: sonnet
 
 # {{PROJECT_NAME}} Release
 
+> **ICM:** if this run was launched with a stage contract (a `*-CONTEXT.md` in `.prism/shared/plans/`, or the path in `$PRISM_ICM_CONTRACT`), read it first and honor its Inputs / Locked Decisions / Success criteria before anything else. Binding: `.prism/shared/ref/icm-run-contract.md`.
+
 Full release pipeline: bump version → build + test → commit → tag → push → GitHub release. Generalized from the Prism release workflow — adapt the artifact steps to whichever surfaces this project ships.
 
 ## Step 1: Determine the bump

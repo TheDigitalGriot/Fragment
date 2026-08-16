@@ -15,12 +15,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import subprocess
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
-from _hygiene import find_binary, log, run_child
+from _hygiene import find_binary, log, run_child, sanitized_env
 from channel_bus import read_events, write_card
 
 # Passive-bus channel server: the tools:{} floor is the load-bearing transport. `Server` declares
@@ -42,6 +44,35 @@ async def list_tools() -> list[Tool]:
                     "args": {"type": "array", "items": {"type": "string"}}
                 },
                 "required": ["args"],
+            },
+        ),
+        # -- ICM stage-walk launcher (Prism-image; cloud-author -> device-execute) -----------
+        Tool(
+            name="icm_prism_run",
+            description=(
+                "Launch a Prism ICM stage-walk headless: spawn `claude -p` with a THIN router "
+                "prompt that reads a *-CONTEXT.md stage contract and executes ONE pipeline stage "
+                "(research|plan|design|implement|validate) autonomously. Detached and non-blocking "
+                "-- returns the heartbeat path to poll (.prism/local/<stage>-progress.txt). Author "
+                "in Cowork cloud, execute device-side. Shape: .prism/shared/ref/icm-run-contract.md."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "stage": {
+                        "type": "string",
+                        "description": "Pipeline stage to drive: research | plan | design | implement | validate.",
+                    },
+                    "contract_path": {
+                        "type": "string",
+                        "description": "Path to the *-CONTEXT.md stage contract (Working/Reference/Locked Decisions).",
+                    },
+                    "cwd": {
+                        "type": "string",
+                        "description": "Repo working dir for the headless run (default: cwd).",
+                    },
+                },
+                "required": ["stage", "contract_path"],
             },
         ),
         # -- Passive-bus channel tools (headless- and Cowork-cloud-safe) ---------------------
@@ -96,6 +127,36 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             log(f"run_command: {args[0]} exited {proc.returncode}: {proc.stderr[:200]}")
         # child stdout returned as a structured tool RESULT -- never printed to stdout (rule 1)
         return [TextContent(type="text", text=proc.stdout)]
+    if name == "icm_prism_run":
+        stage = arguments["stage"]
+        contract_path = arguments["contract_path"]
+        cwd = arguments.get("cwd", os.getcwd())
+        # Thin router prompt -- the contract carries the detail; a headless run cannot ask questions.
+        prompt = (
+            f"Run the {stage} stage. Read the stage contract at {contract_path} and execute it "
+            f"exactly. Load only what each step needs via the discovery agents "
+            f"(graph-navigator/codebase-analyzer/codebase-locator/prism-locator). Proceed "
+            f"autonomously; do not ask questions. Heartbeat one token line per step to "
+            f".prism/local/{stage}-progress.txt."
+        )
+        # rule 4: resolve claude interpreter-first. Detached so the server is NOT blocked (B13
+        # detached-poll launcher); the caller polls the heartbeat file instead of awaiting stdout.
+        claude = find_binary("claude")
+        proc = subprocess.Popen(
+            [claude, "-p", prompt, "--agent", "claude"],
+            cwd=cwd,
+            stdin=subprocess.DEVNULL,  # rule 2
+            stdout=subprocess.DEVNULL,  # rule 1: no child output on our JSON-RPC stdout
+            stderr=subprocess.DEVNULL,
+            env=sanitized_env(),  # rule 3
+        )
+        heartbeat = f".prism/local/{stage}-progress.txt"
+        return [
+            TextContent(
+                type="text",
+                text=f"icm_prism_run launched (pid {proc.pid}) in {cwd}; poll {heartbeat}",
+            )
+        ]
     if name == "read_events":
         events = read_events(arguments.get("state_dir"), since=int(arguments.get("since", 0)))
         return [TextContent(type="text", text=json.dumps(events))]

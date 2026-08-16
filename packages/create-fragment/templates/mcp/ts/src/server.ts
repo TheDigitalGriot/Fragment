@@ -18,7 +18,8 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { findBinary, log, runChild } from './hygiene.js';
+import { spawn } from 'node:child_process';
+import { findBinary, log, runChild, sanitizedEnv } from './hygiene.js';
 import { installReaper } from './launcher.js';
 import { readEvents, writeCard } from './channel-bus.js';
 
@@ -43,6 +44,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         type: 'object',
         properties: { args: { type: 'array', items: { type: 'string' } } },
         required: ['args'],
+      },
+    },
+    // -- ICM stage-walk launcher (Prism-image; cloud-author -> device-execute) -----------
+    {
+      name: 'icm_prism_run',
+      description:
+        'Launch a Prism ICM stage-walk headless: spawn `claude -p` with a THIN router prompt ' +
+        'that reads a *-CONTEXT.md stage contract and executes ONE pipeline stage ' +
+        '(research|plan|design|implement|validate) autonomously. Detached and non-blocking -- ' +
+        'returns the heartbeat path to poll (.prism/local/<stage>-progress.txt). Author in Cowork ' +
+        'cloud, execute device-side. Contract shape: .prism/shared/ref/icm-run-contract.md.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          stage: {
+            type: 'string',
+            description: 'Pipeline stage to drive: research | plan | design | implement | validate.',
+          },
+          contract_path: {
+            type: 'string',
+            description: 'Path to the *-CONTEXT.md stage contract (Working/Reference/Locked Decisions).',
+          },
+          cwd: { type: 'string', description: 'Repo working dir for the headless run (default: process.cwd()).' },
+        },
+        required: ['stage', 'contract_path'],
       },
     },
     // -- Passive-bus channel tools (headless- and Cowork-cloud-safe) --------------------
@@ -93,6 +119,35 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
     }
     // child stdout returned as a structured tool RESULT -- never written to stdout (rule 1)
     return { content: [{ type: 'text', text: result.stdout }] };
+  }
+  if (name === 'icm_prism_run') {
+    const a = req.params.arguments as { stage: string; contract_path: string; cwd?: string };
+    const cwd = a.cwd ?? process.cwd();
+    // Thin router prompt -- the contract carries the detail; a headless run cannot ask questions.
+    const prompt =
+      `Run the ${a.stage} stage. Read the stage contract at ${a.contract_path} and execute it ` +
+      `exactly. Load only what each step needs via the discovery agents ` +
+      `(graph-navigator/codebase-analyzer/codebase-locator/prism-locator). Proceed autonomously; ` +
+      `do not ask questions. Heartbeat one token line per step to .prism/local/${a.stage}-progress.txt.`;
+    // rule 4: resolve claude bundled-first. Detached + unref so the server is NOT blocked (B13
+    // detached-poll launcher); the caller polls the heartbeat file instead of awaiting stdout.
+    const claude = findBinary('claude');
+    const child = spawn(claude, ['-p', prompt, '--agent', 'claude'], {
+      cwd,
+      stdio: 'ignore', // rule 2: no inherited JSON-RPC stdin; rule 1: no child output on our stdout
+      env: sanitizedEnv(), // rule 3
+      detached: true,
+    });
+    child.unref();
+    const heartbeat = `.prism/local/${a.stage}-progress.txt`;
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `icm_prism_run launched (pid ${child.pid ?? '?'}) in ${cwd}; poll ${heartbeat}`,
+        },
+      ],
+    };
   }
   if (name === 'read_events') {
     const a = req.params.arguments as { state_dir?: string; since?: number };

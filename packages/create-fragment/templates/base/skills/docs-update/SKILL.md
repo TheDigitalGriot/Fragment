@@ -6,6 +6,8 @@ model: sonnet
 
 # {{PROJECT_NAME}} Docs Update
 
+> **ICM:** if this run was launched with a stage contract (a `*-CONTEXT.md` in `.prism/shared/plans/`, or the path in `$PRISM_ICM_CONTRACT`), read it first and honor its Inputs / Locked Decisions / Success criteria before anything else. Binding: `.prism/shared/ref/icm-run-contract.md`.
+
 Sync a documentation site from a monolithic source doc. Generalized from the Prism docs-update workflow.
 
 ## Step 0: Find the source

@@ -1,0 +1,49 @@
+# The ICM Run-Contract — {{PROJECT_NAME}}
+
+> Stable reference material for this project. This is the **ICM↔pipeline binding**: how an Isolated
+> Context Method stage contract (a `*-CONTEXT.md`) drives ONE stage of a headless run without
+> widening scope. It points at the method; it does not re-inline it. One home per fact — a link
+> beats a copy.
+
+If {{PROJECT_NAME}} depends on the **Prism plugin**, the canonical, always-current version of this
+contract lives at the plugin's `skills/icm-architect/references/prism-run-contract.md` — read that
+first and treat this file as the project-local pointer. What follows is the durable summary so a
+headless run is never blocked on plugin availability.
+
+## The stage-contract shape
+
+Instantiate `.prism/shared/plans/_TEMPLATE-stage-CONTEXT.md` (copy, never author from blank). Its
+sections:
+
+- **Role** — where the run executes and the ONE stage it drives. No scope-widening.
+- **Inputs — Working vs Reference** — *Working* = the exact paths this run edits/produces; *Reference*
+  = stable material pulled via code-intel, never inlined. Plus an explicit **Do NOT load** line.
+- **Locked Decisions** — the calls already made, which the agent must honor and must NOT relitigate
+  or ask about. A headless run cannot answer a question, so every fork it would otherwise stop on is
+  decided here in advance.
+- **Process** — short, numbered, checkable steps.
+- **Success criteria** — checkable outcomes plus a scope guard (only the intended files changed).
+- **Heartbeat tokens** — the token sequence appended per step (see below).
+
+## The code-intel-slice rule
+
+Ground every claim through the discovery agents — **graph-navigator** (structure, call-chains,
+blast-radius), **codebase-analyzer** (HOW, file:line), **codebase-locator** (WHERE), **prism-locator**
+(existing `.prism/` research/plans/handoffs). Query the graph; read only the slice each step needs;
+**never photocopy whole files**. A stage's full context — entry + contract + references + inputs —
+should land around **2,000–8,000 tokens**. If a stage balloons, split it, tighten the Inputs list,
+or push detail into a reference file the contract points at but does not inline.
+
+## The heartbeat protocol
+
+Append **one timestamped token line per numbered step** to `.prism/local/<stage>-progress.txt`. The
+tokens are declared in the contract's Heartbeat block; a final `DONE` line records the outcome (e.g.
+commit shas), and any blocker is written as `BLOCKED-<one-word-why>`. This is the file-bus a
+supervising session polls to watch a headless run without attaching to it.
+
+## The honor rule
+
+Read the contract first. **Do not relitigate its Locked Decisions.** Proceed autonomously — **do not
+ask** (a headless run hangs on interactive prompts; there is no one to answer). On a genuine blocker,
+write the `BLOCKED-<why>` heartbeat and stop the stage cleanly — leave the tree committed or clean,
+never half-edited.

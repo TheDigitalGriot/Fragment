@@ -6,6 +6,8 @@ model: sonnet
 
 # {{PROJECT_NAME}} Closing Ceremony
 
+> **ICM:** if this run was launched with a stage contract (a `*-CONTEXT.md` in `.prism/shared/plans/`, or the path in `$PRISM_ICM_CONTRACT`), read it first and honor its Inputs / Locked Decisions / Success criteria before anything else. Binding: `.prism/shared/ref/icm-run-contract.md`.
+
 The three end-of-cycle skills, run back-to-back in order, so a release wraps in one command instead of three separate asks. Generalized from the Prism closing-ceremony workflow.
 
 ## Sequence (run in order — do not skip or reorder)
