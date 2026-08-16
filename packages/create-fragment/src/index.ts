@@ -5,7 +5,9 @@ import { dirname } from 'path';
 import { runInit } from './commands/init.js';
 import { runAdd } from './commands/add.js';
 import { runConnect } from './commands/connect.js';
+import { runEmit } from './commands/emit.js';
 import { getGitAuthorName } from './utils/git.js';
+import { TARGET_IDS } from './engine/adapters/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -86,6 +88,23 @@ program
   .action(() => {
     runConnect({
       projectDir: process.cwd(),
+    });
+  });
+
+program
+  .command('emit <skillDir>')
+  .description('Compile a Fragment skill to a target package via the multi-target adapter compiler')
+  .requiredOption('--target <id>', `Target platform (${TARGET_IDS.join(' | ')})`)
+  .option('--out <dir>', 'Output directory (default: ./emit/<target>)')
+  .option('--mcp-url <url>', 'Hosted MCP server URL for tool-backed targets')
+  .option('--tools <file>', 'Path to a normalized tools.json to attach to the IR')
+  .action((skillDir: string, opts: Record<string, string>) => {
+    runEmit({
+      skillDir: resolve(process.cwd(), skillDir),
+      target: opts.target,
+      outDir: opts.out ? resolve(process.cwd(), opts.out) : resolve(process.cwd(), 'emit', opts.target),
+      mcpUrl: opts.mcpUrl,
+      toolsFile: opts.tools ? resolve(process.cwd(), opts.tools) : undefined,
     });
   });
 
