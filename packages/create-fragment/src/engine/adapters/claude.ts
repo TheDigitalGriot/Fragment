@@ -14,6 +14,7 @@ export const claudeAdapter: Adapter = {
   label: 'Claude (native skill folder)',
   installable: true,
   emit(ir: SkillIR, outDir: string, _opts?: EmitOptions): string[] {
-    return emitSkillFolder(ir, outDir);
+    // Claude/Cowork target: bundled-resource skills carry the cloud/device resolution block.
+    return emitSkillFolder(ir, outDir, { platformResolution: true });
   },
 };

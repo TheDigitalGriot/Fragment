@@ -1,6 +1,11 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to create-fragment (fragment-ai-scaffold) are documented here.
+
+## v4.7.0 — 2026-08-24
+
+### Added
+- **Cloud / device resource resolution in emitted skills.** The Claude adapter now injects a plugin-variant `Resources — cloud / device resolution` block into any scaffolded skill that bundles `references/` / `scripts/` (has knowledge files). Bundled docs resolve via `PLUGIN_ROOT/<path>` (present in Cowork cloud); bundled scripts always run device-side because Cowork has no Bash tool. Injection is idempotent and Claude-target only — the ChatGPT Skills adapter is untouched, since the block references Cowork/PLUGIN_ROOT/the Windows-MCP · `claude.exe -p` device bridge. Conforms to the cl-plugin-structure standard v0.7.5+ (Prism v4.12.0). New unit tests cover injection, the no-knowledge-files and ChatGPT-target negatives, and idempotency.
 
 ## v4.6.0 — 2026-08-17
 

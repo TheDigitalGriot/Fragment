@@ -1,6 +1,6 @@
 {
   "name": "create-fragment",
-  "version": "4.6.0",
+  "version": "4.7.0",
   "type": "module",
   "description": "Scaffold multi-surface AI applications with pre-wired agent connections (Electron, VS Code, TUI)",
   "author": {
