@@ -1,0 +1,7 @@
+STEP1_GROUNDING 2026-09-05T05:54:04-04:00
+STEP2_GATE 2026-09-05T05:58:44-04:00 scripts/verify-fragment.mjs written
+STEP3_HEARTBEAT 2026-09-05T05:58:44-04:00 .fragment/<cmd>-progress.txt writer in gate
+STEP4_WIRE 2026-09-05T06:00:08-04:00 init/add/connect gated
+STEP5_BUILD 2026-09-05T06:02:09-04:00 tsc exit 0 (npm run build exit 0 once ComSpec set; empty ComSpec in headless env was the exit-1 cause)
+STEP6_SCAFFOLD 2026-09-05T06:03:53-04:00 init PASS exit0 + negative I2 FAIL exit1 + add-blocked-print + connect I3b bite
+DONE_FRAGMENT_GATE 2026-09-05T06:03:53-04:00

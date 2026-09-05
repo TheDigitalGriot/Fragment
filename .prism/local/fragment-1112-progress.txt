@@ -1,0 +1,11 @@
+2026-09-05T07:06:05-04:00 STEP1_GROUNDING entry points grounded: electron src/main.ts(app.on ready)+src/renderer.tsx; vscode src/extension.ts+webview-ui/src/main.tsx; tui main.go/app; mobile index.ts/app/_layout.tsx
+2026-09-05T07:12:51-04:00 STEP1_GROUNDING baseline observed: I3b FAIL 6/6 (nothing imports glue); pre-existing defects found: electron+vscode glue import depth ../../../ should be 4-up, vscode tsconfig rootDir/paths structural, mobile settings.tsx ConnStatus, tui main.go NewModel undefined + no go.sum
+2026-09-05T07:16:44-04:00 STEP2_INJECT inject.ts injectEntry/injectGoEntry + wiring in all 4 generators; glue import depths fixed; tui aggregator plugins.go; main.go app.NewModel enabler
+2026-09-05T07:16:44-04:00 STEP3_PACKAGE gate moved to packages/create-fragment/scripts + repo shim; files[] += scripts; resolveGate in-package first; templates resolution in-package first
+2026-09-05T07:16:55-04:00 STEP4_BUILD tsc exit 0
+2026-09-05T07:20:20-04:00 STEP5_VALIDATE_CONNECT 4-surface: I3a/I3b PASS, idempotent (markers stay 2 after 2nd run); clean electron+tui scaffold: 5 pass 0 fail 0 unverified
+2026-09-05T07:21:37-04:00 STEP6_VALIDATE_PACKAGE npm pack carries package/scripts/verify-fragment.mjs; published-like install ran gate (I1 PASS = in-package templates); BLOCKED on I3c FAIL exit 1 no Wired line; after go mod tidy 5 pass exit 0
+2026-09-05T07:21:41-04:00 STEP6_VALIDATE_PACKAGE npm pack carries package/scripts/verify-fragment.mjs; published-like install ran gate; BLOCKED on I3c FAIL exit 1; after go mod tidy 5 pass exit 0
+2026-09-05T07:23:05-04:00 STEP7_CLPLUGIN validate-agent.sh on fragment-plugin: PASS exit 0 with 2 advisory warnings (validator set -e ((x++)) artifact identified); scaffold manifest+skills conformant
+2026-09-05T07:23:28-04:00 STEP8_DONE diff scoped 9 files +243/-15 no EOL churn; no mcp glue wired; I1 still manifest-driven
+2026-09-05T07:23:28-04:00 DONE_1112

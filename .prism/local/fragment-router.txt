@@ -1,0 +1,8 @@
+You are running an ICM stage-walk in the Fragment repo. The current working directory is the repo root (C:\Users\digit\GriotApps\Fragment).
+Do only what the stage contract specifies. Do not expand scope. Follow every Locked decision and the Plugin-structure governance.
+Read the contract at C:\Users\digit\GriotApps\Prism\.prism\shared\plans\fragment-icm-gate-CONTEXT.md and execute its numbered Process steps 1 through 7 exactly.
+Load only the inputs each step names, as code-intel slices, never whole-file photocopies.
+Honor the ground truth: I1 is manifest-driven via templates per surface manifest.json workspaceEntry (mcp maps to apps/mcp/ts, tui is null), never naive apps per surface. Do not wire mcp glue; mcp is excluded from detectSurfaces by design.
+verify-fragment.mjs is pure Node ESM with no dependencies; it exits nonzero on any FAIL.
+Write heartbeat tokens to C:\Users\digit\GriotApps\Fragment\.prism\local\fragment-gate-progress.txt as you complete each step.
+When finished, print a compact summary with three things: the gate PASS table on a fresh scratch scaffold, the negative case FAIL output, and git diff --stat.

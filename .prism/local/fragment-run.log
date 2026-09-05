@@ -1,0 +1,70 @@
+Steps 1–7 complete. `DONE_FRAGMENT_GATE` written to `.prism/local/fragment-gate-progress.txt`.
+
+## 1. Gate PASS — fresh scratch scaffold
+
+`node scripts/verify-fragment.mjs <tmp>/scratch-app --cmd init --surfaces electron,vscode,tui,mobile,mcp`
+
+```
+fragment invariants — init · C:\Users\digit\AppData\Local\Temp\fragment-gate-scratch\scratch-app
+
+  I1    PASS        surfaces scaffolded + workspace-registered 5 surface(s): electron->apps/electron, vscode->apps/vscode, tui: workspaceEntry null (no npm workspace expected), mobile->apps/mobile, mcp->apps/mcp/ts
+  I2    PASS        no surviving {{TOKEN}} in emitted files    126 text file(s) scanned, 0 survivors
+  I3a   UNVERIFIED  glue files exist on disk                   no plugin glue emitted — `fragment connect` has not run for this project
+  I3b   UNVERIFIED  glue imported by surface entry point       no plugin glue to check
+  I3c   UNVERIFIED  wired surface builds                       no plugin glue to build
+
+  2 pass · 0 fail · 3 unverified
+GATE_EXIT=0
+```
+
+`.fragment/init-progress.txt` written (`START → I1_PASS → I2_PASS → I3a/b/c_UNVERIFIED → GATE_PASS`). Scaffold root `workspaces`: `["packages/*","apps/electron","apps/vscode","apps/mobile","apps/mcp/ts"]` — **`tui` correctly absent, `mcp` correctly `apps/mcp/ts`, not `apps/mcp`.**
+
+## 2. Negative — the gate bites
+
+Injected `{{RELEASE_CHANNEL}}` into `apps/electron/src/main.ts`:
+
+```
+  I1    PASS        surfaces scaffolded + workspace-registered 4 surface(s): electron->apps/electron, ...
+  I2    FAIL        no surviving {{TOKEN}} in emitted files    apps/electron/src/main.ts [{{RELEASE_CHANNEL}}]
+  1 pass · 1 fail · 3 unverified
+GATE_EXIT=1
+```
+
+And through the command path (`runAdd --mcp` with the token still injected) — the success print never happens:
+
+```
+  I1    PASS   ... 1 surface(s): mcp->apps/mcp/ts
+  I2    FAIL   ... apps/electron/src/main.ts [{{RELEASE_CHANNEL}}]
+runAdd threw, success print blocked: Fragment invariant gate FAILED for `fragment add`. Nothing was claimed complete.
+```
+
+## 3. `git --no-pager diff --stat`
+
+```
+ packages/create-fragment/src/commands/add.ts     |  4 ++++
+ packages/create-fragment/src/commands/connect.ts | 18 +++++++++++++++++-
+ packages/create-fragment/src/commands/init.ts    |  4 ++++
+ 3 files changed, 25 insertions(+), 1 deletion(-)
+untracked: scripts/verify-fragment.mjs · packages/create-fragment/src/engine/gate.ts
+```
+
+`tsc` exit 0; `npm run build` exit 0 (the earlier exit 1 was **empty `ComSpec`** in this headless env — npm's `promise-spawn` got `undefined` for the shell; not a compile error).
+
+---
+
+## Two things you need to decide, beloved
+
+**1. The gate's first catch is real, and it breaks `fragment connect`.** Running connect on the scratch project:
+
+```
+  I3a   PASS        glue files exist on disk              5 file(s) across electron, vscode, mobile (via connect-result)
+  I3b   FAIL        glue imported by surface entry point  apps/electron/src/plugin-glue/mcp-bridge.ts imported by nothing · ... (+1)
+  I3c   UNVERIFIED  wired surface builds                  typescript not installed (npm install not run)
+connect BLOCKED
+```
+
+This is exactly the ground truth the contract named — connect prints "Wired surfaces" and then tells you to *go import them yourself*. The gate makes that claim unclaimable, so **connect now fails until the glue is actually imported.** Fixing that means making the generators inject the import into each surface's entry point — a real change to `connect`, outside this contract's scope, so I did not do it. Your call: (a) follow-on stage that makes connect truly wire, or (b) demote I3b to a warning for `--cmd connect` in the interim. I'd take (a); (b) is the soft fix.
+
+**2. The gate isn't in the published package.** It lives at `<repo>/scripts/`, outside `packages/create-fragment/`, so npm can't ship it in `files`. `resolveGate()` walks up, finds nothing in a published install, warns `invariants UNVERIFIED`, and does **not** block. Honest, but it means the gate is in-repo-only. Want a build step that copies it into the package before publish?
+
+One process note: I used `git stash` to test whether the build failure pre-dated my changes. The pop partially failed (a launcher process held `.prism/local/*.log` open). Full recovery verified — worktree diffed clean against the stash before I dropped it — but that was an unnecessary risk on your repo and I won't reach for stash again mid-run.
