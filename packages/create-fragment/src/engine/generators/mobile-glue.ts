@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { PluginInfo } from '../plugin-discovery.js';
+import { injectEntry } from '../inject.js';
 
 export function generateMobileGlue(mobileDir: string, plugin: PluginInfo): string[] {
   const glueDir = join(mobileDir, 'src', 'plugin-glue');
@@ -11,7 +12,24 @@ export function generateMobileGlue(mobileDir: string, plugin: PluginInfo): strin
   writeFileSync(drivePath, generateDriveClient(plugin), 'utf-8');
   files.push('src/plugin-glue/drive-client.ts');
 
+  wireMobileEntry(mobileDir);
+
   return files;
+}
+
+/**
+ * Wire the emitted glue into the Expo entry point (I3b).
+ *
+ * index.ts — not app/_layout.tsx — is the target: _layout.tsx is an expo-router
+ * ROUTE file, where an extra named export changes routing semantics. index.ts
+ * is the plain app entry, so the registration is inert to the router.
+ */
+function wireMobileEntry(mobileDir: string): void {
+  injectEntry({
+    file: join(mobileDir, 'index.ts'),
+    imports: [`import { registerPluginDrive } from './src/plugin-glue/drive-client.js';`],
+    body: ['registerPluginDrive();'],
+  });
 }
 
 function generateDriveClient(plugin: PluginInfo): string {
@@ -25,9 +43,19 @@ function generateDriveClient(plugin: PluginInfo): string {
  * fully-formed instruction.
  */
 import { chatService } from '../../../../packages/ui/src/services/grpc-client.js';
+import type { ModelId } from '../../../../packages/core/src/shared/types.js';
 
-export function drive(intent: { model?: string; content: string }): void {
+export function drive(intent: { model?: ModelId; content: string }): void {
   void chatService.driveIntent({ source: '${plugin.name}', ...intent });
+}
+
+/**
+ * Publish drive() on globalThis so generated plugin panels can advance the
+ * session without prop-drilling — the React Native counterpart of the Electron
+ * renderer's window.api.drive. Call once from the app entry point.
+ */
+export function registerPluginDrive(): void {
+  (globalThis as unknown as Record<string, unknown>).__fragmentDrive = drive;
 }
 `;
 }

@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import { copyTemplate } from '../engine/copier.js';
 import { buildTokenMap, type TokenMap } from '../engine/tokens.js';
 import { readManifest, updateWorkspaces } from '../engine/manifest.js';
+import { runGate } from '../engine/gate.js';
 
 export interface InitOptions {
   name: string;
@@ -68,6 +69,9 @@ export function runInit(options: InitOptions): void {
     console.log('Installing dependencies...');
     execSync('npm install', { cwd: outputDir, stdio: 'inherit' });
   }
+
+  // 6. Gate BEFORE claiming success — a FAIL throws and the "created" line never prints.
+  runGate({ projectDir: outputDir, cmd: 'init', surfaces, templatesDir });
 
   console.log(`\nFragment project "${name}" created at ${outputDir}`);
   console.log(`Surfaces: ${surfaces.join(', ')}`);

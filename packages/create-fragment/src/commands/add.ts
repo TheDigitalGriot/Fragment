@@ -5,6 +5,7 @@ import { copyTemplate } from '../engine/copier.js';
 import { buildTokenMap } from '../engine/tokens.js';
 import { readManifest, updateWorkspaces } from '../engine/manifest.js';
 import { getGitAuthorName } from '../utils/git.js';
+import { runGate } from '../engine/gate.js';
 
 export interface AddOptions {
   projectDir: string;
@@ -54,6 +55,9 @@ export function runAdd(options: AddOptions): void {
     console.log('Installing dependencies...');
     execSync('npm install', { cwd: projectDir, stdio: 'inherit' });
   }
+
+  // Gate BEFORE claiming success — a FAIL throws and the "added" line never prints.
+  runGate({ projectDir, cmd: 'add', surfaces: [surface], templatesDir });
 
   console.log(`\nSurface "${surface}" added to ${projectDir}`);
 }

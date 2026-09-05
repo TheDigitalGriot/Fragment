@@ -1,5 +1,7 @@
 import { join } from 'path';
+import { mkdirSync, writeFileSync } from 'fs';
 import { discoverPlugin, detectSurfaces } from '../engine/plugin-discovery.js';
+import { runGate } from '../engine/gate.js';
 import { generateElectronGlue } from '../engine/generators/electron-glue.js';
 import { generateVSCodeGlue } from '../engine/generators/vscode-glue.js';
 import { generateTuiGlue } from '../engine/generators/tui-glue.js';
@@ -53,6 +55,20 @@ export function runConnect(options: ConnectOptions): ConnectResult {
     }
   }
 
+  const result: ConnectResult = { plugin: plugin.name, surfaces, files };
+
+  // Publish what we CLAIM we wired, then let the gate check that claim against
+  // disk (files exist, something imports them, the surface still builds) before
+  // a single "Wired surfaces" line is printed. A FAIL throws.
+  const stateDir = join(projectDir, '.fragment');
+  mkdirSync(stateDir, { recursive: true });
+  writeFileSync(
+    join(stateDir, 'connect-result.json'),
+    JSON.stringify(result, null, 2) + '\n',
+    'utf-8',
+  );
+  runGate({ projectDir, cmd: 'connect', surfaces });
+
   console.log(`\nFragment Connect: ${plugin.name}`);
   console.log(`MCP Servers: ${Object.keys(plugin.mcpServers).join(', ')}`);
   console.log(`\nWired surfaces:`);
@@ -63,8 +79,9 @@ export function runConnect(options: ConnectOptions): ConnectResult {
     }
   }
   console.log(`\nNext steps:`);
-  console.log(`  Import the generated glue in each surface's entry point.`);
-  console.log(`  See apps/<surface>/src/plugin-glue/ for generated files.`);
+  console.log(`  Each surface's entry point already imports and calls its glue`);
+  console.log(`  (marked "fragment:plugin-glue"); invariant I3b above verified it.`);
+  console.log(`  See apps/<surface>/**/plugin-glue/ for the generated files.`);
 
-  return { plugin: plugin.name, surfaces, files };
+  return result;
 }

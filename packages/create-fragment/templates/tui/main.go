@@ -6,6 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+
+	"github.com/{{AUTHOR_NAME}}/{{PROJECT_NAME}}/apps/tui/app"
 )
 
 func main() {
@@ -13,7 +15,7 @@ func main() {
 		Use:   "{{PROJECT_NAME}}",
 		Short: "{{PROJECT_NAME}} — Agentic Chat & Tool Timeline TUI",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			m := NewModel()
+			m := app.NewModel()
 			p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
 			if _, err := p.Run(); err != nil {
 				return fmt.Errorf("error running TUI: %w", err)

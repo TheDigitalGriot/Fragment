@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import type { PluginInfo } from '../plugin-discovery.js';
+import { injectEntry } from '../inject.js';
 
 export function generateElectronGlue(electronDir: string, plugin: PluginInfo): string[] {
   const glueDir = join(electronDir, 'src', 'plugin-glue');
@@ -15,7 +16,39 @@ export function generateElectronGlue(electronDir: string, plugin: PluginInfo): s
   writeFileSync(drivePath, generateDriveClient(plugin), 'utf-8');
   files.push('src/plugin-glue/drive-client.ts');
 
+  wireElectronEntries(electronDir);
+
   return files;
+}
+
+/**
+ * Wire the emitted glue into Electron's two entry points (I3b).
+ *
+ * main.ts gets registerPluginHandlers on a SECOND `ready` listener rather than
+ * an edit to the existing one — Electron runs every registered listener, so the
+ * wiring lands during app init without rewriting a line the user may own.
+ * renderer.tsx gets registerDriveClicks appended after the React root mounts.
+ */
+function wireElectronEntries(electronDir: string): void {
+  injectEntry({
+    file: join(electronDir, 'src', 'main.ts'),
+    imports: [`import { registerPluginHandlers } from './plugin-glue/mcp-bridge.js';`],
+    anchor: /^app\.on\('ready'/,
+    body: [
+      `app.on('ready', () => {`,
+      `  registerPluginHandlers(`,
+      `    () => { /* no push channel in main.ts — the renderer pulls via app:get-state */ },`,
+      `    (entry) => { toolTimeline.push(entry); },`,
+      `  );`,
+      `});`,
+    ],
+  });
+
+  injectEntry({
+    file: join(electronDir, 'src', 'renderer.tsx'),
+    imports: [`import { registerDriveClicks } from './plugin-glue/drive-client.js';`],
+    body: ['registerDriveClicks();'],
+  });
 }
 
 function generateDriveClient(plugin: PluginInfo): string {
@@ -68,7 +101,25 @@ function generateBridge(plugin: PluginInfo): string {
  */
 
 import { ipcMain } from 'electron';
-import type { ToolCall } from '../../../packages/core/src/shared/types.js';
+
+/**
+ * Structural mirror of packages/core ToolCall. Declared locally ON PURPOSE:
+ * the surface's tsconfig sets rootDir to src/, so reaching across to
+ * packages/core from generated glue is a TS6059 error no matter how the
+ * relative path is spelled. A local shape keeps the glue self-contained and
+ * still assignable to the core type.
+ */
+interface ToolCall {
+  id: string;
+  model: string;
+  tool: string;
+  target: string;
+  timestamp: string;
+  input?: string;
+  output?: string;
+  duration?: number;
+  status: 'running' | 'complete' | 'error';
+}
 
 interface McpServer {
   command: string;
