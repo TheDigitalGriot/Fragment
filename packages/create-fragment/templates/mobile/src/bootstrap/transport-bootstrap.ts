@@ -1,5 +1,8 @@
 import { setTransport } from "{{PACKAGE_SCOPE}}/ui/transport/types.js";
 import { WebSocketTransport, type ConnStatus } from "../transport/ws-transport.js";
+// Re-export the transport status type so consumers (e.g. settings.tsx) can import
+// it from this single bootstrap surface rather than reaching into ws-transport.
+export type { ConnStatus } from "../transport/ws-transport.js";
 import { loadHostUrl } from "../transport/host-config.js";
 
 let current: WebSocketTransport | null = null;
