@@ -1,7 +1,0 @@
-You are running an ICM stage-walk in the Fragment repo. The working directory is the repo root (C:\Users\digit\GriotApps\Fragment). The invariant gate is already wired (add/connect/init call runGate) and uncommitted; build on that, do not redo it.
-Do only what the stage contract specifies. Do not expand scope. Do not reformat unrelated files. Do not reintroduce line-ending churn.
-Read the contract at C:\Users\digit\GriotApps\Prism\.prism\shared\plans\fragment-connect-wire-and-package-CONTEXT.md and execute its numbered Process steps 1 through 8 exactly, honoring every Locked decision.
-Load only the inputs each step names as code-intel slices, never whole-file photocopies.
-Ground truth: I1 is manifest-driven; glue-bearing surfaces are electron/vscode/tui/mobile only; DO NOT wire mcp glue. Injection into entry points must be idempotent.
-Write heartbeat tokens to C:\Users\digit\GriotApps\Fragment\.prism\local\fragment-1112-progress.txt as you complete each step.
-When finished, print a compact summary: the connect I3a/I3b/I3c PASS table on a fresh scaffold, proof the gate runs from a published-like install and blocks on fail, and git diff --stat.
