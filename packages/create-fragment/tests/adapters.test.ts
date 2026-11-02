@@ -238,3 +238,70 @@ describe('gemini-skills upload folder (Gemini app: Customize > Skills > Create >
     expect(readFileSync(join(out, 'skills', 'demo', 'references', 'logo.png')).equals(bytes)).toBe(true);
   });
 });
+
+describe('gemini-skills "How the other surfaces run this" (Amendment A1, D9)', () => {
+  const surfacesMd = [
+    '# Image generation per surface',
+    '',
+    '| Surface | Generate | Edit from attached refs | Mode | Source |',
+    '|---|---|---|---|---|',
+    '| Gemini app, main chat (Nano Banana 2 / Pro) | yes | yes, multi-image | RUN | https://x.test/a |',
+    '| Codex CLI / Codex app | yes, built in (`$imagegen`, gpt-image-2) | yes (CLI `-i` / `--image`, app drag-in) | RUN via `$imagegen` | https://x.test/b |',
+    '| Claude (claude.ai, Claude Code, Cowork) | no | no | HANDOFF (sort the refs) | https://x.test/c |',
+  ].join('\n');
+
+  const withSurfaces = (instructions: string): SkillIR =>
+    ir({
+      instructions,
+      knowledgeFiles: [
+        { path: 'references/surfaces.md', role: 'reference', content: surfacesMd },
+        { path: 'scripts/sort-refs.py', role: 'script', content: 'print(1)' },
+      ],
+    });
+
+  const resources = [
+    '# Demo',
+    '',
+    '## Resources - cloud / device resolution',
+    '',
+    'Read via PLUGIN_ROOT. Run device-side.',
+    '',
+    '## 1. Do the thing',
+    '',
+    'Step one.',
+  ].join('\n');
+
+  function emitted(src: SkillIR): string {
+    const out = mkdtempSync(join(tmpdir(), 'frag-gsk-d9-'));
+    ADAPTERS['gemini-skills'].emit(src, out);
+    return readFileSync(join(out, 'skills', 'demo', 'SKILL.md'), 'utf-8');
+  }
+
+  it('replaces the Resources section in place: section present, Resources absent, body kept in order', () => {
+    const md = emitted(withSurfaces(resources));
+    expect(md).toContain('## How the other surfaces run this');
+    expect(md).not.toContain('Resources - cloud / device resolution');
+    expect(md).not.toContain('PLUGIN_ROOT');
+    expect(md.indexOf('# Demo')).toBeLessThan(md.indexOf('## How the other surfaces run this'));
+    expect(md.indexOf('## How the other surfaces run this')).toBeLessThan(md.indexOf('## 1. Do the thing'));
+  });
+
+  it('derives every surface fact from the IR and its surfaces table, under 12 lines, no em dash', () => {
+    const md = emitted(withSurfaces(resources));
+    const start = md.indexOf('## How the other surfaces run this');
+    const section = md.slice(start, md.indexOf('## 1. Do the thing')).trim();
+    expect(section.split('\n').length).toBeLessThanOrEqual(12);
+    expect(section).not.toContain(EM_DASH);
+    expect(section).toMatch(/Claude \(Code and Cowork\).*`scripts\/sort-refs\.py`.*device-side.*HANDOFF mode because Claude cannot generate images/);
+    expect(section).toMatch(/Codex.*`agents\/openai\.yaml`.*RUN mode, generating with `\$imagegen`.*CLI `-i` \/ `--image`, app drag-in/);
+    expect(section).toMatch(/Gemini app \(this build\).*RUN mode with Nano Banana 2 \/ Pro.*cannot run `scripts\/sort-refs\.py`.*as a table/);
+  });
+
+  it('is still added (after the H1) when the source has no Resources section, and falls back without a table', () => {
+    const md = emitted(ir({ instructions: '# Demo\n\nBody.' }));
+    expect(md).toContain('## How the other surfaces run this');
+    expect(md.indexOf('# Demo')).toBeLessThan(md.indexOf('## How the other surfaces run this'));
+    expect(md).toContain('Body.');
+    expect(md).not.toContain('undefined');
+  });
+});
