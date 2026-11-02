@@ -19,8 +19,13 @@ export interface SkillFolderOptions {
   platformResolution?: boolean;
 }
 
-/** Marker that keeps block injection idempotent (never duplicated on re-emit). */
-const RESOLUTION_MARKER = 'Resources — cloud / device resolution';
+/**
+ * Marker that keeps block injection idempotent (never duplicated on re-emit). Emitted text carries
+ * no em dash (U+2014); the legacy em-dash heading is still recognised so a skill emitted before
+ * that change is never given a second block.
+ */
+const RESOLUTION_MARKER = 'Resources: cloud / device resolution';
+const LEGACY_RESOLUTION_MARKER = 'Resources — cloud / device resolution';
 
 /**
  * The plugin-variant resolution block. Fragment scaffolds projects that ship AS Claude plugins, so
@@ -28,14 +33,14 @@ const RESOLUTION_MARKER = 'Resources — cloud / device resolution';
  * device-side (Cowork has no Bash tool).
  */
 const RESOLUTION_BLOCK = [
-  '## Resources — cloud / device resolution',
+  `## ${RESOLUTION_MARKER}`,
   '',
   'This skill bundles files under `references/` / `scripts/`. Resolve them by how the plugin is running:',
   '',
-  '- **Read a bundled doc** — `PLUGIN_ROOT/<path>`. The plugin ships its whole folder, so bundled docs are present on desktop/CLI *and* in Cowork cloud.',
-  '- **Run a bundled script** — always device-side. Cowork has no Bash tool, so a bundled script never executes in-cloud; run it via the device bridge (Windows-MCP PowerShell) or `claude.exe -p` headless. On desktop/CLI it runs locally.',
+  '- **Read a bundled doc:** `PLUGIN_ROOT/<path>`. The plugin ships its whole folder, so bundled docs are present on desktop/CLI *and* in Cowork cloud.',
+  '- **Run a bundled script:** always device-side. Cowork has no Bash tool, so a bundled script never executes in-cloud; run it via the device bridge (Windows-MCP PowerShell) or `claude.exe -p` headless. On desktop/CLI it runs locally.',
   '',
-  'Never assume a relative `scripts/…` path executes in the cloud. If the device bridge is unavailable, say so and fall back to the inline instructions — don\'t silently fail.',
+  'Never assume a relative `scripts/…` path executes in the cloud. If the device bridge is unavailable, say so and fall back to the inline instructions; don\'t silently fail.',
 ].join('\n');
 
 /** Serialize the SKILL.md frontmatter + instructions body from the IR. */
@@ -47,7 +52,12 @@ export function renderSkillMarkdown(ir: SkillIR, opts: SkillFolderOptions = {}):
   let body = ir.instructions.trim();
   // A skill that ships knowledge files must teach how to reach them across Cowork cloud vs
   // desktop/CLI. Inject once (idempotent) and only for the Claude/Cowork target.
-  if (opts.platformResolution && ir.knowledgeFiles.length > 0 && !body.includes(RESOLUTION_MARKER)) {
+  if (
+    opts.platformResolution &&
+    ir.knowledgeFiles.length > 0 &&
+    !body.includes(RESOLUTION_MARKER) &&
+    !body.includes(LEGACY_RESOLUTION_MARKER)
+  ) {
     body = `${RESOLUTION_BLOCK}\n\n${body}`;
   }
   return fm.join('\n') + '\n' + body + '\n';

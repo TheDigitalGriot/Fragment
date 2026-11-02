@@ -2,6 +2,12 @@
 
 All notable changes to create-fragment (fragment-ai-scaffold) are documented here.
 
+## Unreleased
+
+### Fixed
+- **ChatGPT Skills / Codex `agents/openai.yaml` now matches OpenAI's current schema** (https://learn.chatgpt.com/docs/build-skills, read 2026-11-01). The sidecar used to carry `name`, `description`, a hardcoded `allow_implicit_invocation: false` and `mcp_servers`, none of which the doc defines. It now emits only the doc's three sections: `interface` (`short_description` from the IR's primary capability, `display_name` when an app title is given), `policy.allow_implicit_invocation` driven by the IR (new `SkillIR.allowImplicitInvocation`, derived from Claude's `disable-model-invocation: true`; the doc default `true` when silent), and `dependencies.tools` (`type: "mcp"`, `value`, `description`, `transport: "streamable_http"`, `url`) only when the skill declares tools. The file moved from `<out>/agents/openai.yaml` to `<out>/skills/<name>/agents/openai.yaml`, a sibling of `SKILL.md` as the doc's folder layout shows, so the skill folder is now self-contained.
+- **No em dashes (U+2014) in emitted text.** The Gemini Gems templates (`gem-guidance.md`, `knowledge-attach-checklist.md`), the ChatGPT Apps test-case stubs and the Claude cloud/device resolution block now use colons, commas and semicolons. The resolution heading is now `Resources: cloud / device resolution`; the old em-dash heading is still recognised so a re-emit never adds a second block. New `tests/adapters.test.ts` fails if any adapter writes U+2014 into any emitted file, and pins the openai.yaml shape.
+
 ## v4.7.0 — 2026-08-24
 
 ### Added

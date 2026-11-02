@@ -17,10 +17,10 @@ const MAX_FILE_MB = 100;
 function renderGuidance(ir: SkillIR): string {
   const toolLines =
     ir.tools.length > 0
-      ? ir.tools.map((t) => `- \`${t.name}\` — ${t.description}`).join('\n')
+      ? ir.tools.map((t) => `- \`${t.name}\`: ${t.description}`).join('\n')
       : '- (This skill declares no external tools; it operates on the attached knowledge + the prompt.)';
 
-  return `# Gemini Gem guidance — ${ir.name}
+  return `# Gemini Gem guidance: ${ir.name}
 
 > Guidance only. Gemini Gems have no manifest or install API, so there is **no installable artifact**
 > to generate. Paste the four sections below into the Gem builder's instructions field, then attach
@@ -33,7 +33,7 @@ You are ${ir.name}, an assistant whose primary job is: ${ir.primaryCapability}.
 ${ir.description}
 
 ## Context
-The following capabilities are available conceptually (Gemini cannot call MCP tools directly — treat
+The following capabilities are available conceptually (Gemini cannot call MCP tools directly, so treat
 these as the operations the assistant reasons about and, where a connector exists, drives):
 
 ${toolLines}
@@ -47,7 +47,7 @@ Reference the attached knowledge files for domain detail before answering.
 
 ---
 
-## Full instructions (source of truth — paste under "Instructions" if the builder allows long form)
+## Full instructions (source of truth: paste under "Instructions" if the builder allows long form)
 
 ${ir.instructions.trim()}
 `;
@@ -58,7 +58,7 @@ function renderChecklist(ir: SkillIR): string {
   const rows =
     files.length > 0
       ? files.map((k, i) => `- [ ] ${i + 1}. \`${k.path}\` (${k.role})`).join('\n')
-      : '- [ ] (No knowledge files derived from this skill — attach any supporting docs manually.)';
+      : '- [ ] (No knowledge files derived from this skill: attach any supporting docs manually.)';
 
   const overflow =
     ir.knowledgeFiles.length > MAX_FILES
@@ -66,7 +66,7 @@ function renderChecklist(ir: SkillIR): string {
         `only the first ${MAX_FILES} are listed. Consolidate or prioritize before attaching.\n`
       : '';
 
-  return `# Knowledge attach checklist — ${ir.name}
+  return `# Knowledge attach checklist: ${ir.name}
 
 Gemini Gems support up to **${MAX_FILES} files × ${MAX_FILE_MB}MB** each, attached manually in the
 builder. Attach the following:

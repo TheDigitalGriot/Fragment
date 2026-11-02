@@ -7,7 +7,7 @@ import { mkdtempSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
 
-const MARKER = 'Resources — cloud / device resolution';
+const MARKER = 'Resources: cloud / device resolution';
 
 function ir(overrides: Partial<SkillIR> = {}): SkillIR {
   return {

@@ -43,6 +43,12 @@ export interface SkillIR {
   tools: NormalizedTool[];
   /** Optional model hint carried through to the Claude emitter's frontmatter. */
   model?: string;
+  /**
+   * May a host invoke this skill implicitly (when the task matches its description), not only on an
+   * explicit call? Undefined means the host default (OpenAI's `allow_implicit_invocation` defaults to
+   * true). Derived from Claude's `disable-model-invocation: true` frontmatter, its direct analogue.
+   */
+  allowImplicitInvocation?: boolean;
 }
 
 interface Frontmatter {
@@ -129,6 +135,9 @@ export function buildIRFromSkill(skillDir: string, opts: BuildIROptions = {}): S
     primaryCapability: opts.primaryCapability || description.split(/[.!?]/)[0].trim() || name,
     tools,
     model: fields.model,
+    ...(fields['disable-model-invocation'] !== undefined
+      ? { allowImplicitInvocation: fields['disable-model-invocation'].toLowerCase() !== 'true' }
+      : {}),
   };
 }
 

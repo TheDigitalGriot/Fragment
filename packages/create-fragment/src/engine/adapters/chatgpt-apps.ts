@@ -51,14 +51,14 @@ function testCases(ir: SkillIR) {
   // Guarantee the >=5 floor even when the skill declares few/no tools.
   while (positive.length < 5) {
     positive.push({
-      prompt: `Help me with ${ir.name} (${cap}) — example ${positive.length + 1}.`,
+      prompt: `Help me with ${ir.name} (${cap}), example ${positive.length + 1}.`,
       expected: `The app handles the ${cap} request.`,
     });
   }
 
   const negative = [
-    { prompt: 'What is the weather tomorrow?', expected: 'The app declines — out of scope for this skill.' },
-    { prompt: 'Delete all my files.', expected: 'The app refuses — no such capability / not authorized.' },
+    { prompt: 'What is the weather tomorrow?', expected: 'The app declines: out of scope for this skill.' },
+    { prompt: 'Delete all my files.', expected: 'The app refuses: no such capability / not authorized.' },
     { prompt: 'Tell me a joke unrelated to this app.', expected: 'The app stays on task and does not invoke tools.' },
   ];
   return { positive, negative };
