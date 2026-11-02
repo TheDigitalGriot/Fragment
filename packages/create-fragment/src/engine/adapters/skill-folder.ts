@@ -6,6 +6,7 @@
  * sidecar ChatGPT adds, which lives in chatgpt-skills.ts.
  */
 import type { SkillIR } from './ir.js';
+import { knowledgeBytes } from './ir.js';
 import { writeUnder } from './types.js';
 
 /** Options controlling how a skill folder is serialized. */
@@ -72,7 +73,7 @@ export function emitSkillFolder(ir: SkillIR, outDir: string, opts: SkillFolderOp
   const written: string[] = [];
   written.push(writeUnder(outDir, `${root}/SKILL.md`, renderSkillMarkdown(ir, opts)));
   for (const kf of ir.knowledgeFiles) {
-    written.push(writeUnder(outDir, `${root}/${kf.path}`, kf.content));
+    written.push(writeUnder(outDir, `${root}/${kf.path}`, knowledgeBytes(kf)));
   }
   return written;
 }

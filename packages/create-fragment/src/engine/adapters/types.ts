@@ -16,6 +16,8 @@ export interface EmitOptions {
   appTitle?: string;
   /** Reverse-DNS-ish app id for submission manifests. */
   appId?: string;
+  /** Absolute path of the source skill folder, when known. Lets a target check name == folder name. */
+  sourceDir?: string;
 }
 
 export interface Adapter {
@@ -30,9 +32,10 @@ export interface Adapter {
 }
 
 /** Write a file under outDir, creating parent dirs, and return its outDir-relative path. */
-export function writeUnder(outDir: string, relPath: string, content: string): string {
+export function writeUnder(outDir: string, relPath: string, content: string | Buffer): string {
   const abs = join(outDir, relPath);
   mkdirSync(dirname(abs), { recursive: true });
-  writeFileSync(abs, content, 'utf-8');
+  if (typeof content === 'string') writeFileSync(abs, content, 'utf-8');
+  else writeFileSync(abs, content);
   return relPath;
 }

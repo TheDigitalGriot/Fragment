@@ -12,6 +12,7 @@ import { chatgptSkillsAdapter } from './chatgpt-skills.js';
 import { chatgptAppsAdapter } from './chatgpt-apps.js';
 import { customGptAdapter } from './custom-gpt.js';
 import { geminiGemsAdapter } from './gemini-gems.js';
+import { geminiSkillsAdapter } from './gemini-skills.js';
 
 export const ADAPTERS: Record<string, Adapter> = {
   [claudeAdapter.id]: claudeAdapter,
@@ -19,6 +20,7 @@ export const ADAPTERS: Record<string, Adapter> = {
   [chatgptAppsAdapter.id]: chatgptAppsAdapter,
   [customGptAdapter.id]: customGptAdapter,
   [geminiGemsAdapter.id]: geminiGemsAdapter,
+  [geminiSkillsAdapter.id]: geminiSkillsAdapter,
 };
 
 export const TARGET_IDS = Object.keys(ADAPTERS);

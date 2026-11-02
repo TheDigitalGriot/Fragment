@@ -25,7 +25,7 @@ export function runEmit(options: EmitCommandOptions): void {
   }
 
   const ir = buildIRFromSkill(skillDir, tools ? { tools } : {});
-  const written = emitTarget(target, ir, outDir, { mcpUrl });
+  const written = emitTarget(target, ir, outDir, { mcpUrl, sourceDir: skillDir });
 
   console.log(`Emitted ${target} package for "${ir.name}" -> ${outDir}`);
   for (const f of written) console.log(`  + ${f}`);

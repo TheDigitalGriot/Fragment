@@ -7,7 +7,7 @@
  * tools) and leaves HOW each platform packages it to the adapters.
  */
 import { readFileSync, readdirSync, existsSync, statSync } from 'fs';
-import { join, relative, basename } from 'path';
+import { join, relative, basename, extname } from 'path';
 
 /** A tool the skill can call, normalized across MCP / OpenAI function / OpenAPI action shapes. */
 export interface NormalizedTool {
@@ -28,7 +28,18 @@ export interface KnowledgeFile {
   /** Path relative to the skill package root, e.g. `references/api.md` or `scripts/run.py`. */
   path: string;
   role: 'reference' | 'script';
+  /** File body. UTF-8 text, or base64 when `encoding` is 'base64' (PDFs, images). */
   content: string;
+  /** Set to 'base64' for binary files so the bytes survive a JSON IR round-trip intact. */
+  encoding?: 'base64';
+}
+
+/** Extensions read as bytes (base64), never decoded as UTF-8 text, which would corrupt them. */
+export const BINARY_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp'];
+
+/** Decode a knowledge file to the exact bytes or text to write to disk. */
+export function knowledgeBytes(kf: KnowledgeFile): string | Buffer {
+  return kf.encoding === 'base64' ? Buffer.from(kf.content, 'base64') : kf.content;
 }
 
 /** The shared IR every adapter consumes. */
@@ -83,10 +94,12 @@ function collectKnowledge(skillDir: string, sub: string, role: KnowledgeFile['ro
       if (statSync(p).isDirectory()) {
         walk(p);
       } else {
+        const binary = BINARY_EXTENSIONS.includes(extname(p).toLowerCase());
         out.push({
           path: relative(skillDir, p).split('\\').join('/'),
           role,
-          content: readFileSync(p, 'utf-8'),
+          content: binary ? readFileSync(p).toString('base64') : readFileSync(p, 'utf-8'),
+          ...(binary ? { encoding: 'base64' as const } : {}),
         });
       }
     }

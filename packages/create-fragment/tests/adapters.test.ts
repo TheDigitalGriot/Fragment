@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { mkdtempSync, readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'fs';
-import { join } from 'path';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'fs';
+import { join, sep } from 'path';
 import { tmpdir } from 'os';
 import { chatgptSkillsAdapter, renderOpenAiYaml } from '../src/engine/adapters/chatgpt-skills.js';
 import { ADAPTERS, TARGET_IDS } from '../src/engine/adapters/index.js';
@@ -137,5 +137,104 @@ describe('no em dash (U+2014) in emitted text', () => {
     ADAPTERS['claude'].emit(legacy, out);
     const md = readFileSync(join(out, 'skills', 'demo', 'SKILL.md'), 'utf-8');
     expect(md).not.toContain('Resources: cloud / device resolution');
+  });
+});
+
+describe('gemini-skills upload folder (Gemini app: Customize > Skills > Create > Upload)', () => {
+  const mixed = (): SkillIR =>
+    ir({
+      knowledgeFiles: [
+        { path: 'references/api.md', role: 'reference', content: '# api' },
+        { path: 'references/notes.txt', role: 'reference', content: 'notes' },
+        { path: 'references/data.csv', role: 'reference', content: 'a,b\n1,2' },
+        { path: 'scripts/run.py', role: 'script', content: 'print(1)' },
+        { path: 'references/config.yaml', role: 'reference', content: 'k: v' },
+        { path: 'references/schema.json', role: 'reference', content: '{}' },
+        { path: 'scripts/tool.mjs', role: 'script', content: 'export {}' },
+        { path: 'scripts/tool.ts', role: 'script', content: 'export {}' },
+      ],
+    });
+
+  it('copies only accepted types (md, txt, py, csv) and puts SKILL.md at the top of the upload folder', () => {
+    const out = mkdtempSync(join(tmpdir(), 'frag-gsk-'));
+    ADAPTERS['gemini-skills'].emit(mixed(), out);
+    const folder = join(out, 'skills', 'demo');
+    expect(existsSync(join(folder, 'SKILL.md'))).toBe(true);
+    const files = walk(folder).map((f) => f.slice(folder.length + 1).split(sep).join('/')).sort();
+    expect(files).toEqual(
+      ['SKILL.md', 'references/api.md', 'references/data.csv', 'references/notes.txt', 'scripts/run.py'].sort(),
+    );
+  });
+
+  it('writes upload-manifest.json as a SIBLING of skills/, never inside the upload folder, listing the skips', () => {
+    const out = mkdtempSync(join(tmpdir(), 'frag-gsk-'));
+    ADAPTERS['gemini-skills'].emit(mixed(), out);
+    expect(existsSync(join(out, 'upload-manifest.json'))).toBe(true);
+    expect(walk(join(out, 'skills')).some((f) => f.endsWith('upload-manifest.json'))).toBe(false);
+    const m = JSON.parse(readFileSync(join(out, 'upload-manifest.json'), 'utf-8'));
+    expect(m.uploadFolder).toBe('skills/demo');
+    expect(m.skipped.map((s: { path: string }) => s.path).sort()).toEqual(
+      ['references/config.yaml', 'references/schema.json', 'scripts/tool.mjs', 'scripts/tool.ts'].sort(),
+    );
+  });
+
+  it('fails loudly when the name is not kebab-case', () => {
+    const out = mkdtempSync(join(tmpdir(), 'frag-gsk-'));
+    for (const bad of ['Demo', 'demo_skill', 'demo--x', '-demo', 'demo skill']) {
+      expect(() => ADAPTERS['gemini-skills'].emit(ir({ name: bad }), out)).toThrow(/kebab-case/);
+    }
+  });
+
+  it('fails loudly when the frontmatter name differs from its source folder name', () => {
+    const out = mkdtempSync(join(tmpdir(), 'frag-gsk-'));
+    expect(() =>
+      ADAPTERS['gemini-skills'].emit(ir({ name: 'demo' }), out, { sourceDir: join(tmpdir(), 'other-name') }),
+    ).toThrow(/does not match its folder name/);
+    expect(() =>
+      ADAPTERS['gemini-skills'].emit(ir({ name: 'demo' }), out, { sourceDir: join(tmpdir(), 'demo') }),
+    ).not.toThrow();
+  });
+
+  it('drops the Claude/Cowork-only Resources section up to the next ## heading, keeping the rest', () => {
+    const body = [
+      '# Demo',
+      '',
+      '## Resources - cloud / device resolution',
+      '',
+      'Read via PLUGIN_ROOT. Run device-side.',
+      '',
+      '## 1. Do the thing',
+      '',
+      'Step one.',
+    ].join('\n');
+    const out = mkdtempSync(join(tmpdir(), 'frag-gsk-'));
+    ADAPTERS['gemini-skills'].emit(ir({ instructions: body }), out);
+    const md = readFileSync(join(out, 'skills', 'demo', 'SKILL.md'), 'utf-8');
+    expect(md).not.toContain('Resources - cloud / device resolution');
+    expect(md).not.toContain('PLUGIN_ROOT');
+    expect(md).toContain('## 1. Do the thing');
+    expect(md).toContain('Step one.');
+    const m = JSON.parse(readFileSync(join(out, 'upload-manifest.json'), 'utf-8'));
+    expect(m.droppedSections).toHaveLength(1);
+  });
+
+  it('emits no em dash (U+2014) anywhere, including the manifest', () => {
+    const out = mkdtempSync(join(tmpdir(), 'frag-gsk-'));
+    ADAPTERS['gemini-skills'].emit(mixed(), out);
+    for (const f of walk(out)) expect(readFileSync(f, 'utf-8')).not.toContain(EM_DASH);
+  });
+
+  it('copies PDFs and images byte-for-byte (base64 through the IR, never decoded as text)', () => {
+    const src = mkdtempSync(join(tmpdir(), 'frag-gsk-src-'));
+    const skillDir = join(src, 'demo');
+    const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0xff, 0x00, 0xc3, 0x28]);
+    mkdirSync(join(skillDir, 'references'), { recursive: true });
+    writeFileSync(join(skillDir, 'SKILL.md'), '---\nname: demo\ndescription: d\n---\n# Demo\n', 'utf-8');
+    writeFileSync(join(skillDir, 'references', 'logo.png'), bytes);
+    const built = buildIRFromSkill(skillDir);
+    expect(built.knowledgeFiles[0].encoding).toBe('base64');
+    const out = mkdtempSync(join(tmpdir(), 'frag-gsk-'));
+    ADAPTERS['gemini-skills'].emit(built, out, { sourceDir: skillDir });
+    expect(readFileSync(join(out, 'skills', 'demo', 'references', 'logo.png')).equals(bytes)).toBe(true);
   });
 });
